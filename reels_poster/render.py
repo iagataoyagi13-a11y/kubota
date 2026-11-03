@@ -64,8 +64,13 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_w: int) -> list[str]:
         line = ""
         for ch in para:
             if draw.textlength(line + ch, font=font) > max_w and line:
-                lines.append(line)
-                line = ch
+                if " " in line.strip():  # 空白があればそこで改行 (1 文字だけ残るのを防ぐ)
+                    head, tail = line.rstrip().rsplit(" ", 1)
+                    lines.append(head)
+                    line = tail + ch
+                else:
+                    lines.append(line)
+                    line = ch
             else:
                 line += ch
         lines.append(line)
@@ -201,7 +206,8 @@ class RenderResult:
 
 def render_day(day: dict, *, media_root: str = "media", out_dir: str = "videos",
                draft_dir: str = "build/drafts", draft: bool = False,
-               bgm_volume: float = 0.25) -> RenderResult:
+               graphic: bool = False, bgm_volume: float = 0.25) -> RenderResult:
+    """graphic=True: 素材が無いシーンをモーショングラフィックスで生成 (投稿用の本番動画)."""
     if not shutil.which("ffmpeg"):
         raise RenderError("ffmpeg がインストールされていません")
     font = find_font()
@@ -210,10 +216,11 @@ def render_day(day: dict, *, media_root: str = "media", out_dir: str = "videos",
     scenes = day["scenes"]
     sources = [find_scene_media(media_dir, i) for i in range(1, len(scenes) + 1)]
     missing = [i for i, s in enumerate(sources, 1) if s is None]
-    if missing and not draft:
-        raise RenderError(f"Day{n}: 素材が足りません シーン {missing} → {media_dir}/ に置くか --draft で下書き")
+    if missing and not (draft or graphic):
+        raise RenderError(f"Day{n}: 素材が足りません シーン {missing} → {media_dir}/ に置くか "
+                          "--graphic (モーショングラフィックス) / --draft (下書き)")
 
-    is_draft = draft or bool(missing)
+    is_draft = draft and not graphic
     target_dir = draft_dir if is_draft else out_dir
     os.makedirs(target_dir, exist_ok=True)
     suffix = "_draft" if is_draft else ""
@@ -223,12 +230,19 @@ def render_day(day: dict, *, media_root: str = "media", out_dir: str = "videos",
     with tempfile.TemporaryDirectory() as tmp:
         segs = []
         for i, (scene, src) in enumerate(zip(scenes, sources), 1):
+            telop_img = draw_telop(scene.get("text", ""), scene.get("sub", ""), label, font)
+            seg = os.path.join(tmp, f"seg{i}.mp4")
+            if src is None and graphic:
+                from .graphic import SceneRenderer
+
+                SceneRenderer(day, scene, i, len(scenes), telop_img, font, seed=n).write(seg)
+                segs.append(seg)
+                continue
             if src is None:
                 src = os.path.join(tmp, f"card{i}.png")
                 draft_card(n, i, scene.get("shot", ""), font).save(src)
             telop = os.path.join(tmp, f"telop{i}.png")
-            draw_telop(scene.get("text", ""), scene.get("sub", ""), label, font).save(telop)
-            seg = os.path.join(tmp, f"seg{i}.mp4")
+            telop_img.save(telop)
             _segment(src, telop, float(scene["dur"]), seg)
             segs.append(seg)
 
@@ -240,6 +254,12 @@ def render_day(day: dict, *, media_root: str = "media", out_dir: str = "videos",
                  "-movflags", "+faststart", joined])
 
         bgm = find_bgm(media_dir)
+        if not bgm and graphic:
+            from .graphic import make_bgm
+
+            total_sec = sum(float(s["dur"]) for s in scenes)
+            bgm = make_bgm(os.path.join(tmp, "bgm.wav"), total_sec + 1, seed=n)
+            bgm_volume = 1.0  # 合成 BGM は音量調整済み
         if bgm:
             _ffmpeg(["-i", joined, "-stream_loop", "-1", "-i", bgm, "-filter_complex",
                      f"[1:a]volume={bgm_volume},afade=t=out:st={sum(s['dur'] for s in scenes) - 1.5}"

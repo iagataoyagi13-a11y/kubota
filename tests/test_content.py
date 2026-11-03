@@ -92,3 +92,38 @@ def test_render_draft_then_schedule(tmp_path, capsys):
     # 二重登録しない
     main(["-q", str(q), "schedule-plan", *common, "--start", "2026-11-04"])
     assert len(Queue(str(q)).items) == 1
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="ffmpeg がありません")
+def test_render_graphic_without_media(tmp_path):
+    from reels_poster.video import check_video
+
+    p, l = _mini_plan(tmp_path)
+    out = tmp_path / "videos"
+    assert main(["render", "--plan", p, "--links", l, "--out", str(out),
+                 "--media", str(tmp_path / "none"), "--day", "1", "--graphic"]) == 0
+    video = out / "day1_a.mp4"
+    r = check_video(str(video))
+    assert r.ok, r.errors
+    assert r.info["width"] == 1080 and r.info["height"] == 1920
+    assert abs(r.info["duration_sec"] - 3.0) < 0.1
+
+
+def test_bgm_is_generated(tmp_path):
+    import wave
+
+    from reels_poster.graphic import make_bgm
+
+    path = make_bgm(str(tmp_path / "b.wav"), 4.0, seed=3)
+    with wave.open(path) as w:
+        assert w.getnchannels() == 2 and abs(w.getnframes() / w.getframerate() - 4.0) < 0.01
+
+
+def test_telop_wraps_at_space():
+    from PIL import Image, ImageDraw, ImageFont
+
+    from reels_poster.render import _wrap, find_font
+
+    d = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    lines = _wrap(d, "熊本の郷土料理 だご汁", ImageFont.truetype(find_font(), 86), 860)
+    assert lines == ["熊本の郷土料理", "だご汁"]

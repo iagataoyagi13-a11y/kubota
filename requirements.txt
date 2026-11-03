@@ -1,1 +1,4 @@
 requests>=2.31
+# 動画生成 (render) に必要
+Pillow>=10
+numpy>=1.26

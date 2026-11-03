@@ -59,7 +59,7 @@ python -m reels_poster refresh-token                    # 長期トークン更�
    - Secrets: `IG_USER_ID`, `IG_ACCESS_TOKEN`
    - Variables (任意): `GRAPH_HOST` (Instagram ログインなら `graph.instagram.com`)
 2. 動画を `videos/` に置き、`python -m reels_poster add ...` で `queue.json` に予約を追加して push
-   - 動画は Git LFS で管理されます (`git lfs install` を事前に実行)
+   - 動画は通常の Git ファイルとして管理します (1 本あたり数 MB。100MB を超える動画は分割・圧縮してください)
 3. `.github/workflows/reels-autopost.yml` が 15 分ごとに `run` を実行し、
    投稿結果 (`status`, `permalink` など) を `queue.json` にコミットします
 
@@ -114,6 +114,7 @@ python -m reels_poster refresh-token                    # 長期トークン更�
 | `content/affiliate_links.json` | アフィリエイトリンク (14 件, `REPLACE_ME` を差し替え) |
 | `content/captions/` | 投稿用キャプション完成版 (【PR】表記・リンク誘導・ハッシュタグ込み) |
 | `content/shot_list.md` | 現地で見る撮影リスト |
+| `videos/day1_kusatsu.mp4` 〜 `day7_kurokawa.mp4` | 生成済みリール動画 (モーショングラフィックス版, 各約21秒) |
 
 ### 流れ
 
@@ -129,9 +130,14 @@ python -m reels_poster plan
 # ③ 撮影前にテロップと尺を確認 (撮影指示カード入りの下書き動画)
 python -m reels_poster render --draft          # → build/drafts/day1_kusatsu_draft.mp4 …
 
-# ④ 撮影素材を media/day1/1.mp4 〜 6.mp4 に置いて本番レンダリング
-#    (写真 .jpg/.png も可 → ゆっくりズーム。BGM は media/bgm.mp3 または media/day1/bgm.mp3)
-python -m reels_poster render                  # → videos/day1_kusatsu.mp4 …
+# ④-A 撮影素材なしで、そのまま投稿できるモーショングラフィックス版を作る (生成済み)
+#      テーマ色の背景・湯けむり・イラスト・テロップのアニメーション・オリジナル BGM 入り
+python -m reels_poster render --graphic        # → videos/day1_kusatsu.mp4 …
+
+# ④-B 撮影素材を media/day1/1.mp4 〜 6.mp4 に置いて本番レンダリング
+#      (写真 .jpg/.png も可 → ゆっくりズーム。BGM は media/bgm.mp3 または media/day1/bgm.mp3)
+#      --graphic を付けると、素材がそろっていないシーンだけグラフィックで補います
+python -m reels_poster render
 
 # ⑤ プロフィール用リンク集ページを生成 → GitHub Pages (docs/ フォルダ) で公開し、URL をプロフィールに設定
 python -m reels_poster linkpage                # → docs/index.html
@@ -147,7 +153,7 @@ git add videos queue.json docs && git commit -m "7日分を予約" && git push
 - キャプション内の URL はタップできないため、「プロフィールのリンク → Day 番号」で誘導します（ページは `#day1` などで各 Day に飛べます）
 - ストーリーズの **リンクスタンプ** に `https://<ページURL>#day1` を貼って、リール投稿と同じ日にシェアすると成果が出やすくなります
 - 各 ASP の規約で Instagram 掲載が許可されているかを確認してください (プログラムごとに SNS 掲載の可否が違います)
-- キャプションは体験ベースのテンプレートです。**実際に訪れた内容に合わせて書き換えてください**（行っていない場所の体験談を書くと優良誤認のおそれがあります）
+- キャプションは「行ったらやりたいこと」形式のガイド文です。実際に訪れて撮影した場合は、体験に合わせて書き換えるとより伝わります（行っていない場所の体験談は書かないでください）
 - 浴室・脱衣所は撮影禁止の施設がほとんどです。外観・客室・料理・足湯・貸切風呂（無人）を中心に撮影してください
 
 ## 開発

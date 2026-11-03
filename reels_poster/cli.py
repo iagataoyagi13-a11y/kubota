@@ -229,9 +229,14 @@ def cmd_render(args) -> int:
 
     plan = _plan(args)
     for d in _selected_days(plan, args.day):
-        res = render_day(d, media_root=args.media, out_dir=args.out, draft=args.draft)
-        kind = f"下書き (素材なし: シーン{res.missing})" if res.draft and res.missing else (
-            "下書き" if res.draft else "本番")
+        res = render_day(d, media_root=args.media, out_dir=args.out, draft=args.draft,
+                         graphic=args.graphic)
+        if res.draft:
+            kind = f"下書き (素材なし: シーン{res.missing})" if res.missing else "下書き"
+        elif res.missing:
+            kind = f"本番 (グラフィック: シーン{res.missing})"
+        else:
+            kind = "本番"
         print(f"✔ Day{d['day']} {kind} {res.duration}秒 → {res.path}")
         if not res.draft:
             print(f"  カバー候補 → {save_cover(d, res.path)}")
@@ -342,6 +347,8 @@ def build_parser() -> argparse.ArgumentParser:
     plan_args(p)
     p.add_argument("--media", default="media", help="素材フォルダ (media/day1/1.mp4 …)")
     p.add_argument("--draft", action="store_true", help="素材が無いシーンは撮影指示カードで下書き")
+    p.add_argument("--graphic", action="store_true",
+                   help="素材が無いシーンをモーショングラフィックスで生成 (そのまま投稿できる本番動画)")
     p.set_defaults(func=cmd_render)
 
     p = sub.add_parser("linkpage", help="プロフィール用アフィリエイトリンク集を生成")
