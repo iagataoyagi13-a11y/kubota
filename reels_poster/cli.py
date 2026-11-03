@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 
@@ -182,6 +183,103 @@ def cmd_refresh(args) -> int:
     return 0
 
 
+def _plan(args):
+    from .content import Plan
+
+    return Plan.load(args.plan, args.links)
+
+
+def _selected_days(plan, days: list[int] | None):
+    return [plan.day(n) for n in days] if days else sorted(plan.days, key=lambda d: d["day"])
+
+
+def cmd_plan(args) -> int:
+    plan = _plan(args)
+    os.makedirs(args.captions_dir, exist_ok=True)
+    for d in _selected_days(plan, args.day):
+        cap = plan.caption(d)
+        path = os.path.join(args.captions_dir, f"day{d['day']}_{d['slug']}.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(cap + "\n")
+        print(f"Day{d['day']} {d['area']} × {d['food']}  {plan.duration(d)}秒 "
+              f"{len(d['scenes'])}シーン  キャプション{len(cap)}字 → {path}")
+    shot_list = os.path.join(os.path.dirname(args.captions_dir.rstrip("/")) or ".", "shot_list.md")
+    with open(shot_list, "w", encoding="utf-8") as f:
+        f.write(f"# 撮影リスト: {plan.data.get('series', '')}\n\n"
+                "縦 9:16・各シーンは表示秒数より 2〜3 秒長めに撮影。"
+                "浴室・脱衣所や他のお客さんが映る場所では撮影しないこと。\n")
+        for d in _selected_days(plan, args.day):
+            f.write(f"\n## Day{d['day']} {d['area']} × {d['food']} ({plan.duration(d)}秒)\n\n"
+                    "| # | 秒 | 撮影内容 | テロップ | 保存ファイル名 |\n|---|---|---|---|---|\n")
+            for i, sc in enumerate(d["scenes"], 1):
+                tel = sc.get("text", "").replace("\n", " ")
+                f.write(f"| {i} | {sc['dur']} | {sc.get('shot', '')} | {tel} | "
+                        f"`media/day{d['day']}/{i}.mp4` |\n")
+    print(f"撮影リスト → {shot_list}")
+    problems = plan.problems()
+    if problems:
+        print("\n要対応:")
+        for p in problems:
+            print(f"  - {p}")
+    return 0
+
+
+def cmd_render(args) -> int:
+    from .render import render_day, save_cover
+
+    plan = _plan(args)
+    for d in _selected_days(plan, args.day):
+        res = render_day(d, media_root=args.media, out_dir=args.out, draft=args.draft)
+        kind = f"下書き (素材なし: シーン{res.missing})" if res.draft and res.missing else (
+            "下書き" if res.draft else "本番")
+        print(f"✔ Day{d['day']} {kind} {res.duration}秒 → {res.path}")
+        if not res.draft:
+            print(f"  カバー候補 → {save_cover(d, res.path)}")
+    return 0
+
+
+def cmd_linkpage(args) -> int:
+    from .linkpage import write_linkpage
+
+    path = write_linkpage(_plan(args), args.output, allow_placeholders=args.allow_placeholders)
+    print(f"✔ リンク集ページ → {path}")
+    return 0
+
+
+def cmd_schedule_plan(args) -> int:
+    from datetime import date, timedelta
+
+    plan = _plan(args)
+    start = date.fromisoformat(args.start) if args.start else (now() + timedelta(days=1)).date()
+    wanted = set(args.day or [d["day"] for d in plan.days])
+    link_problems = [p for p in plan.problems() if "URL" in p or "キー" in p]
+    if link_problems and not args.force:
+        print("アフィリエイトリンクが未設定です (--force で無視):")
+        for p in link_problems:
+            print(f"  - {p}")
+        return 1
+    q = Queue(args.queue)
+    existing = {i["video"] for i in q.items if i["status"] != "failed"}
+    added = 0
+    for d, when in plan.schedule(start):
+        if d["day"] not in wanted:
+            continue
+        video = plan.video_path(d, args.out)
+        if video in existing:
+            print(f"- Day{d['day']} は予約済みのためスキップ")
+            continue
+        check = check_video(video, plan.caption(d))
+        if not check.ok:
+            print(f"✖ Day{d['day']}: {'; '.join(check.errors)}")
+            continue
+        item = q.add(video, plan.caption(d), when, share_to_feed=True)
+        added += 1
+        print(f"✔ Day{d['day']} {when:%m/%d %H:%M} id={item['id']}")
+    q.save()
+    print(f"{added} 件を予約しました")
+    return 0 if added else 1
+
+
 def _add_post_options(p: argparse.ArgumentParser) -> None:
     p.add_argument("video", help="動画ファイルのパス または 公開 URL")
     p.add_argument("-c", "--caption", default="", help="キャプション")
@@ -229,6 +327,35 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-C", "--caption-file")
     p.set_defaults(func=cmd_check)
 
+    def plan_args(p):
+        p.add_argument("--plan", default="content/plan_7days.json")
+        p.add_argument("--links", default="content/affiliate_links.json")
+        p.add_argument("--day", type=int, action="append", help="対象の Day 番号 (複数可)")
+        p.add_argument("--out", default="videos", help="本番動画の出力先")
+
+    p = sub.add_parser("plan", help="7日分の計画を確認し、キャプションを書き出す")
+    plan_args(p)
+    p.add_argument("--captions-dir", default="content/captions")
+    p.set_defaults(func=cmd_plan)
+
+    p = sub.add_parser("render", help="撮影素材からリール動画を生成")
+    plan_args(p)
+    p.add_argument("--media", default="media", help="素材フォルダ (media/day1/1.mp4 …)")
+    p.add_argument("--draft", action="store_true", help="素材が無いシーンは撮影指示カードで下書き")
+    p.set_defaults(func=cmd_render)
+
+    p = sub.add_parser("linkpage", help="プロフィール用アフィリエイトリンク集を生成")
+    plan_args(p)
+    p.add_argument("-o", "--output", default="docs/index.html")
+    p.add_argument("--allow-placeholders", action="store_true", help="未設定 URL があっても生成")
+    p.set_defaults(func=cmd_linkpage)
+
+    p = sub.add_parser("schedule-plan", help="生成済み動画を1日1本ずつ予約キューに登録")
+    plan_args(p)
+    p.add_argument("--start", help="Day1 の投稿日 YYYY-MM-DD (省略時: 明日)")
+    p.add_argument("--force", action="store_true", help="リンク未設定でも登録")
+    p.set_defaults(func=cmd_schedule_plan)
+
     sub.add_parser("limit", help="24 時間の投稿上限を表示").set_defaults(func=cmd_limit)
     sub.add_parser("refresh-token", help="長期アクセストークンを更新").set_defaults(func=cmd_refresh)
     return ap
@@ -238,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except (ConfigError, InstagramAPIError, FileNotFoundError, ValueError) as e:
+    except (RuntimeError, OSError, ValueError, KeyError) as e:  # ConfigError/APIError/RenderError 含む
         print(f"エラー: {e}", file=sys.stderr)
         return 2
 

@@ -93,6 +93,63 @@ python -m reels_poster refresh-token                    # 長期トークン更�
 - 公開 URL で投稿する場合、Instagram のサーバーから直接ダウンロード可能な URL である必要があります
 - 著作権のある音源はこの API では付けられません (動画に含まれる音声がそのまま使われます)
 
+## 7. 企画: 温泉巡り × 郷土料理 7日間 (アフィリエイト連携)
+
+| Day | 温泉 | 郷土料理 | アフィリエイト (宿 / お取り寄せ) |
+|---|---|---|---|
+| 1 | 群馬・草津温泉 | おっきりこみ | `kusatsu_stay` / `okkirikomi` |
+| 2 | 大分・別府温泉 | 地獄蒸し・とり天 | `beppu_stay` / `toriten` |
+| 3 | 山形・銀山温泉 | 芋煮 | `ginzan_stay` / `imoni` |
+| 4 | 岐阜・下呂温泉 | 朴葉味噌・飛騨牛 | `gero_stay` / `hobamiso` |
+| 5 | 愛媛・道後温泉 | 鯛めし | `dogo_stay` / `taimeshi` |
+| 6 | 鹿児島・指宿温泉 | 黒豚しゃぶしゃぶ | `ibusuki_stay` / `kurobuta` |
+| 7 | 熊本・黒川温泉 | だご汁 | `kurokawa_stay` / `dagojiru` |
+
+各リールは約 21 秒・6 シーン構成（フック → 温泉 → 見どころ → 郷土料理 → CTA）。
+台本・テロップ・撮影指示・キャプション・ハッシュタグ(5個)は `content/plan_7days.json` にあります。
+
+| ファイル | 内容 |
+|---|---|
+| `content/plan_7days.json` | 7日分の台本 (シーンごとの秒数・テロップ・撮影内容)、キャプション、ハッシュタグ |
+| `content/affiliate_links.json` | アフィリエイトリンク (14 件, `REPLACE_ME` を差し替え) |
+| `content/captions/` | 投稿用キャプション完成版 (【PR】表記・リンク誘導・ハッシュタグ込み) |
+| `content/shot_list.md` | 現地で見る撮影リスト |
+
+### 流れ
+
+```bash
+# ① アフィリエイトリンクを登録
+#    楽天アフィリエイト / A8.net / もしもアフィリエイト / バリューコマース 等で
+#    宿 (楽天トラベル・じゃらん・一休) と お取り寄せ商品 のリンクを作り、
+#    content/affiliate_links.json の "url" に貼る
+
+# ② 計画とキャプションを確認 (未設定リンクがあれば一覧表示)
+python -m reels_poster plan
+
+# ③ 撮影前にテロップと尺を確認 (撮影指示カード入りの下書き動画)
+python -m reels_poster render --draft          # → build/drafts/day1_kusatsu_draft.mp4 …
+
+# ④ 撮影素材を media/day1/1.mp4 〜 6.mp4 に置いて本番レンダリング
+#    (写真 .jpg/.png も可 → ゆっくりズーム。BGM は media/bgm.mp3 または media/day1/bgm.mp3)
+python -m reels_poster render                  # → videos/day1_kusatsu.mp4 …
+
+# ⑤ プロフィール用リンク集ページを生成 → GitHub Pages (docs/ フォルダ) で公開し、URL をプロフィールに設定
+python -m reels_poster linkpage                # → docs/index.html
+
+# ⑥ 明日から 1 日 1 本、19:00 に予約 → push すれば GitHub Actions が自動投稿
+python -m reels_poster schedule-plan --start 2026-11-04
+git add videos queue.json docs && git commit -m "7日分を予約" && git push
+```
+
+### 収益化と法令のポイント
+
+- **ステマ規制 (景品表示法)**: アフィリエイトを含む投稿はキャプション冒頭に「【PR】」、末尾に広告を含む旨を自動で入れます。リンク集ページにも PR 表記と `rel="sponsored"` を付けます。消さないでください
+- キャプション内の URL はタップできないため、「プロフィールのリンク → Day 番号」で誘導します（ページは `#day1` などで各 Day に飛べます）
+- ストーリーズの **リンクスタンプ** に `https://<ページURL>#day1` を貼って、リール投稿と同じ日にシェアすると成果が出やすくなります
+- 各 ASP の規約で Instagram 掲載が許可されているかを確認してください (プログラムごとに SNS 掲載の可否が違います)
+- キャプションは体験ベースのテンプレートです。**実際に訪れた内容に合わせて書き換えてください**（行っていない場所の体験談を書くと優良誤認のおそれがあります）
+- 浴室・脱衣所は撮影禁止の施設がほとんどです。外観・客室・料理・足湯・貸切風呂（無人）を中心に撮影してください
+
 ## 開発
 
 ```bash
