@@ -1,0 +1,86 @@
+{
+  "kusatsu_stay": {
+    "label": "草津温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "okkirikomi": {
+    "label": "おっきりこみをお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "beppu_stay": {
+    "label": "別府温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "toriten": {
+    "label": "とり天をお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "ginzan_stay": {
+    "label": "銀山温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "imoni": {
+    "label": "芋煮をお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "gero_stay": {
+    "label": "下呂温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "hobamiso": {
+    "label": "朴葉味噌・飛騨牛をお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "dogo_stay": {
+    "label": "道後温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "taimeshi": {
+    "label": "鯛めしをお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "ibusuki_stay": {
+    "label": "指宿温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "kurobuta": {
+    "label": "黒豚しゃぶしゃぶをお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  },
+  "kurokawa_stay": {
+    "label": "黒川温泉の宿を探す",
+    "program": "楽天トラベル / じゃらん / 一休 など",
+    "category": "stay",
+    "url": "REPLACE_ME"
+  },
+  "dagojiru": {
+    "label": "だご汁をお取り寄せ",
+    "program": "楽天市場 / Amazon など",
+    "category": "food",
+    "url": "REPLACE_ME"
+  }
+}
