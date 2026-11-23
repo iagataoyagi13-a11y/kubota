@@ -193,7 +193,7 @@ python -m rakuten_blog run                          # 期限が来た予約を�
 ```
 
 GitHub Actions で自動化する場合は Secrets に `RAKUTEN_POST_ADDRESS` / `SMTP_USER` / `SMTP_PASSWORD` を登録します。
-`.github/workflows/rakuten-autopost.yml` が毎時 1 回キューを確認して投稿し、結果を `queue.json` にコミットします
+`.github/workflows/rakuten-autopost.yml` が毎時 5 分にキューを確認して投稿し、結果を `queue.json` にコミットします
 (Secrets 未設定のあいだは何もしません。スケジュール実行はデフォルトブランチにマージ後に有効になります)。
 
 ### 楽天アフィリエイト連携

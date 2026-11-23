@@ -2,8 +2,13 @@ name: 楽天ブログ 自動投稿
 
 on:
   schedule:
-    - cron: "40 * * * *"   # 毎時40分に予約キューを確認 (UTC 基準・数分遅れることがあります)
+    - cron: "5 * * * *"    # 毎時5分に予約キューを確認 → 9:00 予約は 9:05 以降に投稿 (数分〜十数分遅れることがあります)
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "送信せずに本文だけ表示する (テスト用)"
+        type: boolean
+        default: true
 
 concurrency:
   group: rakuten-autopost
@@ -35,8 +40,11 @@ jobs:
           SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
           SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
         run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python -m rakuten_blog post --day 1 --dry-run; exit 0
+          fi
           if [ -z "$RAKUTEN_POST_ADDRESS" ]; then
-            echo "Secrets が未設定のためスキップします"; exit 0
+            echo "::warning::Secrets (RAKUTEN_POST_ADDRESS など) が未設定のため投稿をスキップしました"; exit 0
           fi
           python -m rakuten_blog run
 
