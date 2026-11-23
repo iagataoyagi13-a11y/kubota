@@ -182,7 +182,8 @@ git add videos queue.json docs && git commit -m "7日分を予約" && git push
 | `content/rakuten_cycling/queue.json` | 予約キュー (2026-11-24 から毎日 09:00 で登録済み) |
 
 ```bash
-# ① 楽天ブログ管理画面でメール投稿用アドレスを確認し、.env に記入 (.env.example 参照)
+# ① 楽天ブログの「メールで更新」機能を使うと no-reply@mail.plaza.rakuten.co.jp からメールが届く。
+#    本文の「日記を更新する場合は XXXXX_XXX_XXXX@mb.plaza.rakuten.co.jp に…」のアドレスを .env に記入
 #    Gmail で送る場合は 2 段階認証を有効にして「アプリパスワード」を SMTP_PASSWORD に
 python -m rakuten_blog build                        # 画像と本文を作り直す (plan.json を編集したら)
 python -m rakuten_blog post --day 1 --dry-run       # 送信内容を確認

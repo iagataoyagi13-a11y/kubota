@@ -14,6 +14,9 @@ from email.message import EmailMessage
 from pathlib import Path
 
 
+POST_DOMAIN = "@mb.plaza.rakuten.co.jp"
+
+
 class ConfigError(RuntimeError):
     pass
 
@@ -43,6 +46,11 @@ class MailConfig:
                                   ("SMTP_PASSWORD", cfg.smtp_password)) if not v]
         if missing:
             raise ConfigError(f"環境変数が未設定です: {', '.join(missing)}")
+        if not cfg.post_address.lower().endswith(POST_DOMAIN):
+            raise ConfigError(
+                f"RAKUTEN_POST_ADDRESS は楽天ブログの投稿用アドレス (…{POST_DOMAIN}) を設定してください。"
+                "自分のメールアドレスではありません。楽天ブログの「メールで更新」機能から届くメール"
+                "(no-reply@mail.plaza.rakuten.co.jp) の本文に書かれています")
         return cfg
 
 
