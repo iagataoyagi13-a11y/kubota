@@ -164,3 +164,15 @@ def test_bodies_with_affiliate_have_pr_and_links():
     assert html.startswith(f"<p>{affiliate.PR_HEADER}</p>")
     assert 'rel="sponsored nofollow noopener"' in html and "明るい&lt;ライト&gt;" in html and "a=1&amp;b=2" in html
     assert affiliate.PR_HEADER not in p.text_body(d)
+
+
+def test_mail_config_rejects_non_rakuten_address(monkeypatch):
+    import pytest
+    from rakuten_blog.mailpost import ConfigError, MailConfig
+    monkeypatch.setenv("SMTP_USER", "me@gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "x")
+    monkeypatch.setenv("RAKUTEN_POST_ADDRESS", "me@gmail.com")
+    with pytest.raises(ConfigError, match="mb.plaza.rakuten.co.jp"):
+        MailConfig.from_env()
+    monkeypatch.setenv("RAKUTEN_POST_ADDRESS", "abc_123_xyz@mb.plaza.rakuten.co.jp")
+    assert MailConfig.from_env().post_address.endswith("@mb.plaza.rakuten.co.jp")
