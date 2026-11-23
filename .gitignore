@@ -5,3 +5,4 @@ __pycache__/
 queue.json.tmp
 build/
 media/
+content/rakuten_cycling/queue.json.tmp

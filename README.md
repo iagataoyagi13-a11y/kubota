@@ -156,6 +156,50 @@ git add videos queue.json docs && git commit -m "7日分を予約" && git push
 - キャプションは「行ったらやりたいこと」形式のガイド文です。実際に訪れて撮影した場合は、体験に合わせて書き換えるとより伝わります（行っていない場所の体験談は書かないでください）
 - 浴室・脱衣所は撮影禁止の施設がほとんどです。外観・客室・料理・足湯・貸切風呂（無人）を中心に撮影してください
 
+## 8. 楽天ブログ自動投稿: 62歳ヒゲおやじの北勢ぽたりんぐ7日間 (rakuten_blog)
+
+桑名市・四日市市・鈴鹿市の公園をめぐるサイクリング記事 7 日分と、
+白ヒゲ・丸メガネの 62 歳サイクリストのイラスト (1200x800, Pillow で生成) を用意し、
+楽天ブログの **メール投稿** 機能で 1 日 1 記事ずつ自動投稿します。
+
+| Day | 市 | 公園 | 画像 |
+|---|---|---|---|
+| 1 | 桑名市 | 九華公園 (桑名城跡) | `day1_kuwana_kyuka.jpg` |
+| 2 | 桑名市 | 七里の渡し公園 | `day2_kuwana_shichiri.jpg` |
+| 3 | 四日市市 | 鵜の森公園 | `day3_yokkaichi_unomori.jpg` |
+| 4 | 四日市市 | 垂坂公園 | `day4_yokkaichi_tarusaka.jpg` |
+| 5 | 四日市市 | 四日市市南部丘陵公園 | `day5_yokkaichi_nanbu.jpg` |
+| 6 | 鈴鹿市 | 石垣池公園 | `day6_suzuka_ishigakiike.jpg` |
+| 7 | 鈴鹿市 | 鈴鹿青少年の森 | `day7_suzuka_seishonen.jpg` |
+
+| ファイル | 内容 |
+|---|---|
+| `content/rakuten_cycling/plan.json` | 7日分のタイトル・本文・ワンポイント・タグ・画像の背景シーン |
+| `content/rakuten_cycling/images/` | 生成済みアイキャッチ画像 |
+| `content/rakuten_cycling/posts/` | 本文 (メール用 `.txt` / エディタ貼り付け用 `.html`) |
+| `content/rakuten_cycling/queue.json` | 予約キュー (2026-11-24 から毎日 07:30 で登録済み) |
+
+```bash
+# ① 楽天ブログ管理画面でメール投稿用アドレスを確認し、.env に記入 (.env.example 参照)
+#    Gmail で送る場合は 2 段階認証を有効にして「アプリパスワード」を SMTP_PASSWORD に
+python -m rakuten_blog build                        # 画像と本文を作り直す (plan.json を編集したら)
+python -m rakuten_blog post --day 1 --dry-run       # 送信内容を確認
+python -m rakuten_blog post --day 1                 # 今すぐ 1 記事投稿 (まず 1 本で動作確認)
+python -m rakuten_blog schedule --start 2026-12-01 --replace   # 開始日を変える
+python -m rakuten_blog list                         # 予約一覧
+python -m rakuten_blog run                          # 期限が来た予約を投稿 (1 回 1 件まで)
+```
+
+GitHub Actions で自動化する場合は Secrets に `RAKUTEN_POST_ADDRESS` / `SMTP_USER` / `SMTP_PASSWORD` を登録します。
+`.github/workflows/rakuten-autopost.yml` が毎時 1 回キューを確認して投稿し、結果を `queue.json` にコミットします
+(Secrets 未設定のあいだは何もしません。スケジュール実行はデフォルトブランチにマージ後に有効になります)。
+
+注意点:
+- メール投稿の受付設定 (アドレス・送信元の登録・画像の扱い) は楽天ブログ側の仕様に従います。最初は `post --day 1` で 1 本だけ送り、
+  タイトル・改行・画像が意図どおりか確認してから予約を有効にしてください
+- 本文は公園紹介 + おやじの一言の構成で、走行距離などの数値や具体的な体験談は入れていません。実際に走ったら写真や感想を足すとより伝わります
+- 公園内の自転車乗り入れ可否は現地の案内に従ってください (記事内でも押し歩きを推奨しています)
+
 ## 開発
 
 ```bash
