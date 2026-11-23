@@ -40,9 +40,11 @@ class Plan:
         """メール投稿用のプレーンテキスト本文."""
         lines = [d["lead"], ""]
         for sec in d["sections"]:
-            lines += [f"■{sec['h']}", sec["p"], ""]
+            lines += [f"【{sec['h']}】", sec["p"], ""]
         lines.append("【今日のワンポイント】")
         lines += [f"・{t}" for t in d["tips"]]
+        if self.data.get("notice"):
+            lines += ["", self.data["notice"]]
         lines += ["", self.data["signature"], "", " ".join(f"#{t}" for t in d["tags"])]
         return "\n".join(lines)
 
@@ -58,6 +60,8 @@ class Plan:
             parts += [f"<h3>{e(sec['h'])}</h3>", f"<p>{e(sec['p'])}</p>"]
         parts.append("<h3>今日のワンポイント</h3>")
         parts.append("<ul>" + "".join(f"<li>{e(t)}</li>" for t in d["tips"]) + "</ul>")
+        if self.data.get("notice"):
+            parts.append(f"<p>{e(self.data['notice'])}</p>")
         parts.append("<p>" + e(self.data["signature"]).replace("\n", "<br>") + "</p>")
         parts.append("<p>" + " ".join(f"#{e(t)}" for t in d["tags"]) + "</p>")
         return "\n".join(parts)

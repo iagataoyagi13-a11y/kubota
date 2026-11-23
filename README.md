@@ -156,7 +156,9 @@ git add videos queue.json docs && git commit -m "7日分を予約" && git push
 - キャプションは「行ったらやりたいこと」形式のガイド文です。実際に訪れて撮影した場合は、体験に合わせて書き換えるとより伝わります（行っていない場所の体験談は書かないでください）
 - 浴室・脱衣所は撮影禁止の施設がほとんどです。外観・客室・料理・足湯・貸切風呂（無人）を中心に撮影してください
 
-## 8. 楽天ブログ自動投稿: 62歳ヒゲおやじの北勢ぽたりんぐ7日間 (rakuten_blog)
+## 8. 楽天ブログ自動投稿: おべおやじの北勢ぽたりんぐ7日間 (rakuten_blog)
+
+投稿先: [おべおやじのブログ](https://plaza.rakuten.co.jp/agata13/) — 既存記事にそろえて【見出し】形式・※注意書き付き・毎朝 9:00 投稿
 
 桑名市・四日市市・鈴鹿市の公園をめぐるサイクリング記事 7 日分と、
 白ヒゲ・丸メガネの 62 歳サイクリストのイラスト (1200x800, Pillow で生成) を用意し、
@@ -177,7 +179,7 @@ git add videos queue.json docs && git commit -m "7日分を予約" && git push
 | `content/rakuten_cycling/plan.json` | 7日分のタイトル・本文・ワンポイント・タグ・画像の背景シーン |
 | `content/rakuten_cycling/images/` | 生成済みアイキャッチ画像 |
 | `content/rakuten_cycling/posts/` | 本文 (メール用 `.txt` / エディタ貼り付け用 `.html`) |
-| `content/rakuten_cycling/queue.json` | 予約キュー (2026-11-24 から毎日 07:30 で登録済み) |
+| `content/rakuten_cycling/queue.json` | 予約キュー (2026-11-24 から毎日 09:00 で登録済み) |
 
 ```bash
 # ① 楽天ブログ管理画面でメール投稿用アドレスを確認し、.env に記入 (.env.example 参照)
