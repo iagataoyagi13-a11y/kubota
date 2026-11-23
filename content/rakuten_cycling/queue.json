@@ -1,0 +1,51 @@
+[
+  {
+    "day": 1,
+    "title": "【Day1】62歳のおべおやじ、桑名・九華公園からぽたりんぐ開始",
+    "scheduled_at": "2026-11-24T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 2,
+    "title": "【Day2】東海道の歴史を感じる、桑名・七里の渡し公園と揖斐川の風",
+    "scheduled_at": "2026-11-25T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 3,
+    "title": "【Day3】四日市の街なかオアシス、鵜の森公園でひと休み",
+    "scheduled_at": "2026-11-26T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 4,
+    "title": "【Day4】ちょっと坂道に挑戦、四日市・垂坂公園の丘へ",
+    "scheduled_at": "2026-11-27T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 5,
+    "title": "【Day5】広々とした四日市市南部丘陵公園で、ゆったりペダル",
+    "scheduled_at": "2026-11-28T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 6,
+    "title": "【Day6】鈴鹿市・石垣池公園、池のほとりで深呼吸",
+    "scheduled_at": "2026-11-29T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  },
+  {
+    "day": 7,
+    "title": "【Day7】ゴールは森の中、鈴鹿青少年の森で7日間を振り返る",
+    "scheduled_at": "2026-11-30T09:00:00+09:00",
+    "status": "pending",
+    "attempts": 0
+  }
+]

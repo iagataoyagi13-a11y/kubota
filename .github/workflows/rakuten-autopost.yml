@@ -1,0 +1,60 @@
+name: 楽天ブログ 自動投稿
+
+on:
+  schedule:
+    - cron: "5 * * * *"    # 毎時5分に予約キューを確認 → 9:00 予約は 9:05 以降に投稿 (数分〜十数分遅れることがあります)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "送信せずに本文だけ表示する (テスト用)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: rakuten-autopost
+  cancel-in-progress: false   # 二重投稿防止
+
+permissions:
+  contents: write             # 投稿結果 (queue.json) をコミットするため
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: 予約投稿を実行
+        env:
+          RAKUTEN_POST_ADDRESS: ${{ secrets.RAKUTEN_POST_ADDRESS }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python -m rakuten_blog post --day 1 --dry-run; exit 0
+          fi
+          if [ -z "$RAKUTEN_POST_ADDRESS" ]; then
+            echo "::warning::Secrets (RAKUTEN_POST_ADDRESS など) が未設定のため投稿をスキップしました"; exit 0
+          fi
+          python -m rakuten_blog run
+
+      - name: 投稿結果をコミット
+        if: always()
+        run: |
+          if git diff --quiet -- content/rakuten_cycling/queue.json; then exit 0; fi
+          git config user.name  "rakuten-blog-bot"
+          git config user.email "rakuten-blog-bot@users.noreply.github.com"
+          git add content/rakuten_cycling/queue.json
+          git commit -m "chore: 楽天ブログ投稿結果を更新 [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push
