@@ -7,6 +7,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import affiliate as aff
+
 PLAN_PATH = Path("content/rakuten_cycling/plan.json")
 IMAGE_DIR = Path("content/rakuten_cycling/images")
 POST_DIR = Path("content/rakuten_cycling/posts")
@@ -36,23 +38,27 @@ class Plan:
         return self.root / IMAGE_DIR / f"day{d['day']}_{d['slug']}.jpg"
 
     # ------------------------------------------------------------ 本文
-    def text_body(self, d: dict) -> str:
-        """メール投稿用のプレーンテキスト本文."""
-        lines = [d["lead"], ""]
+    def text_body(self, d: dict, items: list | None = None) -> str:
+        """メール投稿用のプレーンテキスト本文 (items があれば楽天アフィリエイト欄と PR 表記を付ける)."""
+        lines = [aff.PR_HEADER, ""] if items else []
+        lines += [d["lead"], ""]
         for sec in d["sections"]:
             lines += [f"【{sec['h']}】", sec["p"], ""]
         lines.append("【今日のワンポイント】")
         lines += [f"・{t}" for t in d["tips"]]
+        if items:
+            lines += [""] + aff.text_block(items, d.get("affiliate_intro", ""))
         if self.data.get("notice"):
             lines += ["", self.data["notice"]]
         lines += ["", self.data["signature"], "", " ".join(f"#{t}" for t in d["tags"])]
         return "\n".join(lines)
 
-    def html_body(self, d: dict, image_url: str | None = None) -> str:
+    def html_body(self, d: dict, image_url: str | None = None, items: list | None = None) -> str:
         """楽天ブログのエディタ (HTML モード) に貼り付ける用の本文."""
         e = html.escape
         src = image_url or self.image_path(d).name
-        parts = [
+        parts = [f"<p>{aff.PR_HEADER}</p>"] if items else []
+        parts += [
             f'<p><img src="{e(src)}" alt="{e(d["city"])}・{e(d["park"])}をサイクリングする62歳ヒゲおやじ" width="600"></p>',
             f"<p>{e(d['lead'])}</p>",
         ]
@@ -60,6 +66,8 @@ class Plan:
             parts += [f"<h3>{e(sec['h'])}</h3>", f"<p>{e(sec['p'])}</p>"]
         parts.append("<h3>今日のワンポイント</h3>")
         parts.append("<ul>" + "".join(f"<li>{e(t)}</li>" for t in d["tips"]) + "</ul>")
+        if items:
+            parts += aff.html_block(items, d.get("affiliate_intro", ""))
         if self.data.get("notice"):
             parts.append(f"<p>{e(self.data['notice'])}</p>")
         parts.append("<p>" + e(self.data["signature"]).replace("\n", "<br>") + "</p>")

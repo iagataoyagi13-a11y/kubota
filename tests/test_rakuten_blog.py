@@ -86,3 +86,81 @@ def test_run_marks_posted_and_retries(tmp_path, monkeypatch):
     for _ in range(3):
         assert cli.main(["run"]) == 1
     assert load()[1]["status"] == "failed" and load()[1]["attempts"] == 3
+
+
+# ---------------------------------------------------------------- 楽天アフィリエイト
+from urllib.parse import parse_qs, unquote, urlparse  # noqa: E402
+
+from rakuten_blog import affiliate  # noqa: E402
+
+AID = "1a2b3c4d.5e6f7a8b.1a2b3c4d.5e6f7a8b"
+
+
+def test_every_day_has_affiliate_picks():
+    for d in plan().days:
+        assert len(d["affiliate"]) == 2 and d["affiliate_intro"]
+
+
+def test_search_link_wraps_rakuten_search():
+    url = affiliate.search_link("自転車 ヘルメット", AID)
+    u = urlparse(url)
+    assert u.netloc == "hb.afl.rakuten.co.jp" and u.path == f"/hgc/{AID}/"
+    target = parse_qs(u.query)["pc"][0]
+    assert unquote(target) == "https://search.rakuten.co.jp/search/mall/自転車 ヘルメット/"
+
+
+def test_resolve_without_affiliate_id_is_empty():
+    assert affiliate.resolve(affiliate.AffiliateConfig(), [{"label": "a", "keyword": "b"}]) == []
+
+
+class FakeResp:
+    def __init__(self, data):
+        self.data = data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self.data
+
+
+class FakeSession:
+    def __init__(self, data=None, exc=None):
+        self.data, self.exc, self.calls = data, exc, []
+
+    def get(self, url, params, timeout):
+        self.calls.append(params)
+        if self.exc:
+            raise self.exc
+        return FakeResp(self.data)
+
+
+def test_resolve_uses_api_affiliate_url():
+    s = FakeSession({"Items": [{"itemName": "軽量 ヘルメット  大人用", "itemPrice": 5980,
+                                "affiliateUrl": "https://hb.afl.rakuten.co.jp/x", "itemUrl": "https://item",
+                                "mediumImageUrls": ["https://img/1.jpg"], "shopName": "店"}]})
+    cfg = affiliate.AffiliateConfig(AID, "appid")
+    items = affiliate.resolve(cfg, [{"label": "ヘルメット", "keyword": "ヘルメット"}], session=s)
+    assert items[0].url == "https://hb.afl.rakuten.co.jp/x" and items[0].price == 5980
+    assert items[0].name == "軽量 ヘルメット 大人用" and items[0].image == "https://img/1.jpg"
+    assert s.calls[0]["affiliateId"] == AID and s.calls[0]["applicationId"] == "appid"
+
+
+def test_resolve_falls_back_to_search_link_on_api_error():
+    cfg = affiliate.AffiliateConfig(AID, "appid")
+    items = affiliate.resolve(cfg, [{"label": "L", "keyword": "ライト"}], session=FakeSession(exc=OSError("x")),
+                              log=lambda *_: None)
+    assert items[0].url.startswith(f"https://hb.afl.rakuten.co.jp/hgc/{AID}/") and items[0].price is None
+
+
+def test_bodies_with_affiliate_have_pr_and_links():
+    p = plan()
+    d = p.day(2)
+    items = [affiliate.Item("ライト", "明るい<ライト>", "https://hb.afl.rakuten.co.jp/x?a=1&b=2", 1980, "https://img")]
+    text = p.text_body(d, items)
+    assert text.startswith(affiliate.PR_HEADER)
+    assert "▼ライト：明るい<ライト>（1,980円）\nhttps://hb.afl.rakuten.co.jp/x?a=1&b=2" in text
+    html = p.html_body(d, "x.jpg", items)
+    assert html.startswith(f"<p>{affiliate.PR_HEADER}</p>")
+    assert 'rel="sponsored nofollow noopener"' in html and "明るい&lt;ライト&gt;" in html and "a=1&amp;b=2" in html
+    assert affiliate.PR_HEADER not in p.text_body(d)

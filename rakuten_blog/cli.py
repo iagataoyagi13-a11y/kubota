@@ -15,9 +15,9 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from . import illustrate
+from . import affiliate, illustrate
 from .content import POST_DIR, Plan
-from .mailpost import ConfigError, MailConfig, build_message, send
+from .mailpost import ConfigError, MailConfig, _load_dotenv, build_message, send
 
 JST = timezone(timedelta(hours=9))
 QUEUE_PATH = Path("content/rakuten_cycling/queue.json")
@@ -56,13 +56,19 @@ def due(items: list[dict], at: datetime) -> list[dict]:
 
 
 # ------------------------------------------------------------ commands
+def affiliate_items(d: dict) -> list:
+    return affiliate.resolve(affiliate.AffiliateConfig.from_env(), d.get("affiliate", []))
+
+
 def cmd_build(plan: Plan, args) -> int:
     POST_DIR.mkdir(parents=True, exist_ok=True)
     for d in plan.days:
         img = illustrate.render_day(d, plan.data["series"], plan.image_path(d))
         stem = f"day{d['day']}_{d['slug']}"
-        (POST_DIR / f"{stem}.txt").write_text(f"{d['title']}\n\n{plan.text_body(d)}\n", encoding="utf-8")
-        (POST_DIR / f"{stem}.html").write_text(plan.html_body(d, f"../images/{img.name}") + "\n", encoding="utf-8")
+        items = affiliate_items(d)
+        (POST_DIR / f"{stem}.txt").write_text(f"{d['title']}\n\n{plan.text_body(d, items)}\n", encoding="utf-8")
+        (POST_DIR / f"{stem}.html").write_text(plan.html_body(d, f"../images/{img.name}", items) + "\n",
+                                               encoding="utf-8")
         print(f"Day{d['day']}: {img}")
     return 0
 
@@ -76,6 +82,19 @@ def cmd_schedule(plan: Plan, args) -> int:
     save_queue(items)
     for it in items:
         print(f"Day{it['day']}  {it['scheduled_at']}  {it['title']}")
+    return 0
+
+
+def cmd_affiliate(plan: Plan, args) -> int:
+    cfg = affiliate.AffiliateConfig.from_env()
+    if not cfg.enabled:
+        print("RAKUTEN_AFFILIATE_ID が未設定のため、記事にアフィリエイトリンクは入りません")
+        return 0
+    print("商品検索 API:", "使う" if cfg.application_id else "使わない (検索結果ページへのリンク)")
+    for d in plan.days:
+        for it in affiliate_items(d):
+            price = f" {it.price:,}円" if it.price else ""
+            print(f"Day{d['day']} {it.label}: {it.name}{price}\n    {it.url}")
     return 0
 
 
@@ -93,7 +112,7 @@ def post_day(plan: Plan, n: int, dry_run: bool, cfg: MailConfig | None) -> None:
     image = plan.image_path(d)
     if not image.exists():
         raise FileNotFoundError(f"{image} がありません。先に build を実行してください")
-    body = plan.text_body(d)
+    body = plan.text_body(d, affiliate_items(d))
     if dry_run or cfg is None:
         print(f"--- [dry-run] 件名: {d['title']}\n添付: {image}\n{body}\n---")
         return
@@ -147,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--time", help="投稿時刻 HH:MM (省略時は plan.json の post_time)")
     s.add_argument("--replace", action="store_true", help="既存の予約を置き換える")
     sub.add_parser("list", help="予約一覧")
+    sub.add_parser("affiliate", help="各 Day の楽天アフィリエイトリンクを確認")
     p = sub.add_parser("post", help="指定した Day を今すぐ投稿")
     p.add_argument("--day", type=int, required=True)
     p.add_argument("--dry-run", action="store_true")
@@ -155,8 +175,10 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--max", type=int, default=1, help="1 回の実行で投稿する最大件数 (既定 1)")
     args = ap.parse_args(argv)
 
+    _load_dotenv()
     plan = Plan.load()
-    handlers = {"build": cmd_build, "schedule": cmd_schedule, "list": cmd_list, "post": cmd_post, "run": cmd_run}
+    handlers = {"affiliate": cmd_affiliate, "build": cmd_build, "schedule": cmd_schedule,
+                "list": cmd_list, "post": cmd_post, "run": cmd_run}
     try:
         return handlers[args.cmd](plan, args)
     except (ConfigError, FileNotFoundError, KeyError) as exc:
