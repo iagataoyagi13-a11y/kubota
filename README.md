@@ -193,6 +193,8 @@ python -m rakuten_blog list                         # 予約一覧
 python -m rakuten_blog run                          # 期限が来た予約を投稿 (1 回 1 件まで)
 ```
 
+**現在は手動投稿に切り替え中で、自動実行 (schedule) は止めています。** 手動投稿は `content/rakuten_cycling/posts/` の本文と `images/` の画像を楽天ブログのエディタに貼り付けます。
+
 GitHub Actions で自動化する場合は Secrets に `RAKUTEN_POST_ADDRESS` / `SMTP_USER` / `SMTP_PASSWORD` を登録します。
 `.github/workflows/rakuten-autopost.yml` が毎時 5 分にキューを確認して投稿し、結果を `queue.json` にコミットします
 (Secrets 未設定のあいだは何もしません。スケジュール実行はデフォルトブランチにマージ後に有効になります)。
